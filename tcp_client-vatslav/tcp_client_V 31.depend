@@ -1,0 +1,31 @@
+# depslib dependency file v1.0
+1339392893 source:c:\users\student\desktop\tcp_client_v 31\main.cpp
+	<stdio.h>
+	<string.h>
+	<winsock2.h>
+	<windows.h>
+	<iostream>
+	<sstream>
+	<string>
+	<time.h>
+
+1339397619 source:c:\users\student\desktop\new\tcp_client_v 31\main.cpp
+	<stdio.h>
+	<string.h>
+	<winsock2.h>
+	<windows.h>
+	<iostream>
+	<sstream>
+	<string>
+	<time.h>
+
+1339522156 source:c:\users\вацлав.вацлав-пк\desktop\new cur\new\tcp_client_v 31\main.cpp
+	<iostream>
+	<sstream>
+	<string>
+	<time.h>
+	<stdio.h>
+	<string.h>
+	<winsock2.h>
+	<windows.h>
+

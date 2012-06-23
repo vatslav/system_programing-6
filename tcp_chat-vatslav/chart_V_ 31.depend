@@ -1,0 +1,41 @@
+# depslib dependency file v1.0
+1339367068 source:e:\current\chart_v_ 31\main.cpp
+	<sstream>
+	<iostream>
+	<string>
+	<map>
+	<stdio.h>
+	<winsock2.h>
+
+1339394771 source:c:\users\student\desktop\chart_v_ 31\main.cpp
+	<sstream>
+	<iostream>
+	<string>
+	<map>
+	<stdio.h>
+	<winsock2.h>
+
+1339402949 source:c:\users\student\desktop\new\chart_v_ 31\main.cpp
+	<string>
+	<stdio.h>
+	<winsock2.h>
+	<map>
+	<sstream>
+	<iostream>
+
+1339514670 source:c:\users\вацлав.вацлав-пк\desktop\new cur\new\chart_v_ 31\main.cpp
+	<string>
+	<stdio.h>
+	<winsock2.h>
+	<map>
+	<sstream>
+	<iostream>
+
+1340461787 source:e:\github\system_programing-6\tcp_chat-vatslav\main.cpp
+	<string>
+	<stdio.h>
+	<winsock2.h>
+	<map>
+	<sstream>
+	<iostream>
+

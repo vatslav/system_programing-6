@@ -1,0 +1,8 @@
+Connect^localhost:21
+// ---
+Send^user anonymousP^1000
+Send^pass P^1000
+Send^pwdP^1000
+Send^quitP^1500
+// ---
+DisConnect^
