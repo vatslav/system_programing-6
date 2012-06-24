@@ -7,14 +7,14 @@
 #include <winsock2.h>
 #include <windows.h>
 using namespace std;
-///проверить на большем количестве мьюетексы
+
 HANDLE servMutex;
 HANDLE keybMutex;
 
 DWORD WINAPI getMsg(LPVOID dSocket);
 DWORD WINAPI getKeyb(LPVOID dKeyb);
 
-string getsysstart();
+string streamTickCount();
 
 void SetTextColor(int colour);
 
@@ -66,22 +66,41 @@ int main(int argc, char* argv[])
         sstr >> SERVERADDR >> PORT;
     }
 
-    sockaddr_in dest_addr;
-    dest_addr.sin_family = AF_INET;
-    dest_addr.sin_port = htons(PORT);
-    HOSTENT *hst;
+    sockaddr_in dest_addr; ///ПОЧЕМУ ПЕРЕМЕННАЯ НАЗВАНА ИМЕННО ТАК?
+
+    /**struct sockaddr_in
+{
+    short sin_family; // семейство протоколов (как правило, AF_INET)
+    unsigned short sin_port; // порт
+    struct in_addr sin_addr; // IP-адрес
+=!= на самом деле есть: sin_addr.s_addr, почему sin_addr хранит подструктуру?
+    char sin_zero[8]; // не используется, должно быть заполнено нулями
+};
+    **/
+    dest_addr.sin_family = AF_INET; //мы точно работаем по TCP
+    dest_addr.sin_port = htons(PORT); //порт преобразововать не надо, сразу пишем в структуру
+    HOSTENT *hst; ///структура в которой хранится DNS сервера(имя, основной адр, побочные,aux)
+    /**struct hostent
+{
+    char* h_name;            	// официальное имя узла
+    char* FAR * h_aliases;   	// альтернативные имена узла (массив строк)
+    short h_addrtype;             	// тип адреса
+    short h_length;               	// длина адреса (как правило AF_INET)
+    char** h_addr_list; 	// список указателей на IP-адреса. ноль - конец списка
+}; */
 
 
+    ///если нам дали ip, то ок пишем его в структуру
     if (inet_addr(SERVERADDR) != INADDR_NONE)
         dest_addr.sin_addr.s_addr = inet_addr(SERVERADDR);
-    else
+    else///если не ip,пытаемся получить ip SERVERADDR`а
     {
-        if (hst = gethostbyname(SERVERADDR))
+        if (hst = gethostbyname(SERVERADDR))///если получилось получить host addr by name -> true
         {
             struct in_addr* ad = (struct in_addr*)hst->h_addr_list[ 0 ];
             dest_addr.sin_addr.s_addr = ad->s_addr;
         }
-        else
+        else ///нет такого адреса/неправильный адрес
         {
             printf("Invalid address %s\n", SERVERADDR);
             closesocket(my_sock);
@@ -89,31 +108,42 @@ int main(int argc, char* argv[])
             return -1;
         }
     }
-
+        ///если нам дали ip не существ. сервера
     if (connect(my_sock, (sockaddr *)&dest_addr, sizeof(dest_addr)))
     {
         printf("Connect error %d\n", WSAGetLastError());
         return -1;
     }
-//cout<<(string("ServMutex")+getsysstart()).c_str()<<"\n";
+
+        ///streamTickCount () - время от старта системы в милисекундах
     cout<<"Connection with " << SERVERADDR << " was established successfully\n";
     //string t="random"+rand() % 10 + 1;
     servMutex = CreateMutex(
                     NULL,                       // default security attributes
                     FALSE,                      // initially not owned!!
-                    (string("ServMutex")+getsysstart()).c_str());               // name mutex     "random");
-    //printf( "Текущее время: %s \n", timeStr);
+                    ( string("ServMutex")+streamTickCount() ).c_str());               // name mutex     "random");
+
     keybMutex = CreateMutex(
                     NULL,                       // default security attributes
                     FALSE,                      // initially not owned!!
                     //"key");
-                    (string("KeybMutex")+getsysstart()).c_str());               // name mutex
-
+                    ( string("KeybMutex")+streamTickCount() ).c_str());               // name mutex
     DWORD servThID;
     CreateThread(NULL, 0, getMsg, &my_sock, 0, &servThID);
+    /**HANDLE CreateThread(
 
-    DWORD keybThID;
+LPSECURITY_ATTRIBUTES lpThreadAttributes, // дескриптор защиты
+SIZE_T dwStackSize,                       // начальный размер стека
+LPTHREAD_START_ROUTINE lpStartAddress,    // функция потока
+LPVOID lpParameter,                       // параметр потока
+DWORD dwCreationFlags,                    // опции создания
+LPDWORD lpThreadId                        // идентификатор потока
+
+);*/
+    DWORD keybThID;        ///getKeyb - функция, с 1 обяз параметром
     CreateThread(NULL, 0, getKeyb,  &my_sock, 0, &keybThID);
+    //cout<<getKeyb<<endl;
+
 
     HANDLE h[2]= {servMutex, keybMutex};
     Sleep(2000);
@@ -121,7 +151,12 @@ int main(int argc, char* argv[])
     while (!quit )
     {
         DWORD dw = WaitForMultipleObjects(2, h, FALSE, INFINITE);
-        //      std::cout << "counter : " << ++cnt << "\n";
+        /**DWORD WaitForMultipleObjects(
+DWORD nCount,               // число объектов в массиве lpHandles
+CONST HANDLE *lpHandles,    // указатель на массив описателей объектов ядра
+BOOL bWaitAll,              // флаг, означающей надо ли дожидаться всех объектов или достаточно одного
+DWORD dwMilliseconds        // таймаут
+);*/
         switch (dw)
         {
         case WAIT_FAILED:
@@ -129,6 +164,7 @@ int main(int argc, char* argv[])
             break;
         case WAIT_TIMEOUT:
             // ни один из объектов не освободился в течение таймаута (если устанволен)
+            //у нас INFINITE, так что думаю это ткусок кода не когда выполниться
             std::cout << "Error: Time OUT!\n";
             break;
         case WAIT_OBJECT_0 + 0:
@@ -249,7 +285,7 @@ void SetTextColor(int colour)
     SetConsoleTextAttribute(hStdOut, (WORD)((background << 4) | text));
 }
 
-string getsysstart()
+string streamTickCount()
 {
   stringstream stream;
   stream<<GetTickCount();

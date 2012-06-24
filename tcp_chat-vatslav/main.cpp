@@ -109,7 +109,17 @@ int main(int argc, char* argv[])
     ///2,2 - версия системы сокетов
     ///WSAStartup - инициализация интерфейса  Windows Sockets
     if (WSAStartup( MAKEWORD( 2, 2 ), &g_wsadata )) /// 0 - успех
-    {
+    {   /**typedef struct WSAData
+{
+  WORD                       wVersion;
+  WORD                       wHighVersion;
+  char                           szDescription[WSADESCRIPTION_LEN+1];
+  char                           szSystemStatus[WSASYS_STATUS_LEN+1];
+  unsigned short          iMaxSockets;
+  unsigned short          iMaxUdpDg;
+  char FAR*                lpVendorInfo;
+}*/
+
         SetTextColour(4);
         ///WSAGetLastError - возврщает код ошибки
         printf("ERROR: Error WSAStartup %d\n", WSAGetLastError());
@@ -172,6 +182,13 @@ int main(int argc, char* argv[])
     Если поле sin_addr.s_addr имеет значение INADDR_ANY,
     то системный вызов будет привязывать к socket'у номер (адрес) локального узла сети.
     */
+    /**struct sockaddr_in
+{
+    short sin_family; // семейство протоколов (как правило, AF_INET)
+    unsigned short sin_port; // порт
+    struct in_addr sin_addr; // IP-адрес
+    char sin_zero[8]; // не используется, должно быть заполнено нулями
+};   */
     sockaddr_in local_addr;
     local_addr.sin_family = AF_INET;
     local_addr.sin_port = htons(my_port);
@@ -294,7 +311,7 @@ DWORD WINAPI ServClient(LPVOID data) ///принимаем безтиповые данные
     string ip="["+cl->addr+"]";
     while ( (bytes_recv = recv( ///Чтение данных из сокета.
                               ///Функция возвращает число считанных байтов или -1 в случае ошибки.
-                              ///Нулевое значение сигнализирует об отсутствии записанных в сокет процессом-поставщиком данных.
+/*                              ///Нулевое значение сигнализирует об отсутствии записанных в сокет процессом-поставщиком данных.*/
                               my_sock,        ///сокет-дескриптор, из которого читаются данные
                               buff,           /// адрес буфера для записи читаемых данных
                               sizeof(buff) - 1,/// длина буфера для записи читаемых данных
@@ -389,15 +406,17 @@ DWORD WINAPI ServClient(LPVOID data) ///принимаем безтиповые данные
     delete cl;
     return 0;
 }
-
+///аргмуенты для sendto()
 void hello(int& my_sock, bool& isConn, struct client* cl, istringstream& sstr,char* buff,string ip)
 {
-    if ( isConn )
+    if ( isConn ) ///если клиент уже  поздоровался с нами
     {
-        echoes(my_sock,buff);
-        SetTextColour(4);
+        echoes(my_sock,buff); ///вернем ему его "здрасти"
+        SetTextColour(4); ///установим цвет ошибок
+        ///сформируем ответ
         printf("%s ERROR: %s: %s\n",myTime(),cl->name==""?ip.c_str():cl->name.c_str(),buff);
         string msgAns = "#5ERROR: you are already authorised\n";
+        ///отсылаем сообщение
         send(my_sock, msgAns.c_str(), strlen( msgAns.c_str() ), 0);
     }
     else
@@ -405,16 +424,8 @@ void hello(int& my_sock, bool& isConn, struct client* cl, istringstream& sstr,ch
         string name;
         sstr >> name;
         bool signs=0;
-        int len = strlen(name.c_str());
-        int t=0;
-        for (int i = 0 ; i < len ; i++)
-        {
-            t=(int)name[i];
-            if ( !( (t>=65 and t<=90) or (t>=97 and t<=122 ) or (t>=-64 and t<=-1) or ( t==-88 ) or ( t == -72) or (t>=48 and t<=57 ) ) )
-            {
-                signs=1;
-            }
-        }
+        int len = strlen( name.c_str() );
+
         if ( name.empty() )
         {
             echoes(my_sock,buff);
@@ -422,14 +433,27 @@ void hello(int& my_sock, bool& isConn, struct client* cl, istringstream& sstr,ch
             printf("%s ERROR: %s: %s\n",myTime(),cl->name==""?ip.c_str():cl->name.c_str(),buff);
             string msgAns = "#5ERROR: No client name specified\n";
             send(my_sock, msgAns.c_str(), strlen( msgAns.c_str() ), 0);
+            return;
         }
-        else if(signs)
+        int buf_char=0;
+        for (int i = 0 ; i < len ; i++)
+        {
+            buf_char=(int)name[i];
+            if ( !( (buf_char>=65 and buf_char<=90) or (buf_char>=97 and buf_char<=122 ) or (buf_char>=-64 and buf_char<=-1) or ( buf_char==-88 ) or ( buf_char == -72) or (buf_char>=48 and buf_char<=57 ) ) )
+            {
+                signs=1;
+            }
+        }
+//        delete buf_char;
+        if(signs)
         {
             echoes(my_sock,buff);
             SetTextColour(4);
             printf("%s ERROR: %s: %s\n",myTime(),cl->name==""?ip.c_str():cl->name.c_str(),buff);
             string msgAns = "#5ERROR: Name must contain only letters and numbers\n";
             send(my_sock, msgAns.c_str(), strlen( msgAns.c_str() ), 0);
+
+            return;
         }
         else if ( arrClients.count(name) )
         {
@@ -740,6 +764,8 @@ void msg(int& my_sock, bool& isConn,struct client* cl,istringstream& sstr,char* 
     }}
 void ign(int& my_sock, bool& isConn,struct client* cl,istringstream& sstr,char* buff,string ip)
 {
+    bool rep1=false;
+    bool rep2=false;
     echoes(my_sock,buff);
     Sleep(1);
     string ignClient="";
@@ -773,12 +799,27 @@ void ign(int& my_sock, bool& isConn,struct client* cl,istringstream& sstr,char* 
                   msgAns += "SERVER: OK: now you ignore '" + tmp.from + "'\n";
                   send(my_sock, msgAns.c_str(), strlen( msgAns.c_str() ), 0);
                   SetTextColour(2);
+                    if (!rep1)///первый игнор пол маске
+                  {
                   printf("%s %s: %s\n",myTime(),cl->name==""?ip.c_str():cl->name.c_str(),buff);
+                   rep1=true;
+                   }
                   SetTextColour(4);
+
+
                   printf("%s Client '%s' added '%s' to ignore list\n",myTime(),cl->name.c_str(),tmp.from.c_str());
+
+
               }
               else if (arrIgnClients.count(tmp))
               {
+                  /** ВРЕМЯ_ИМЯкЛИЕНТ_: КОМАНДА**/
+                  SetTextColour(2);
+                  if (!rep2)///ВТОРОЙ ИГНОР ПО МАСКЕ (ПСЕВДО ОТ ИГНОР ПО МАСКЕ)
+                  {printf("%s %s: %s\n",myTime(),cl->name==""?ip.c_str():cl->name.c_str(),buff);
+                    rep2=true;}
+
+
                   SetTextColour(4);
                   printf("%s ERROR: %s is already ignoring %s (command:%s)\n",myTime(),cl->name==""?ip.c_str():cl->name.c_str(),tmp.from.c_str(),buff);
                   string msgAns = "#3";
@@ -796,7 +837,7 @@ void ign(int& my_sock, bool& isConn,struct client* cl,istringstream& sstr,char* 
         send(my_sock, msgAns.c_str(), strlen( msgAns.c_str() ), 0);
       }
 
-
+//sdfsdfsdf
     }
     else
         if ( ignClient.empty() )
@@ -815,7 +856,11 @@ void ign(int& my_sock, bool& isConn,struct client* cl,istringstream& sstr,char* 
                 SetTextColour(2);
                 printf("%s %s: %s\n",myTime(),cl->name==""?ip.c_str():cl->name.c_str(),buff);
                 SetTextColour(4);
-                printf("%s Client '%s' removed '%s' from ignore list\n",myTime(),cl->name.c_str(),ignClient.c_str());
+                //if (!rep1)
+               // {
+                    printf("%s Client '%s' removed '%s' from ignore list\n",myTime(),cl->name.c_str(),ignClient.c_str());
+                    //rep1=true;
+                //}
 
                 string msgAns ="#3";
                 msgAns += myTime();
@@ -849,12 +894,14 @@ void ign(int& my_sock, bool& isConn,struct client* cl,istringstream& sstr,char* 
                         msgAns += "SERVER: OK: now you ignore '" + ignClient + "'\n";
                         send(my_sock, msgAns.c_str(), strlen( msgAns.c_str() ), 0);
                         SetTextColour(2);
+
                         printf("%s %s: %s\n",myTime(),cl->name==""?ip.c_str():cl->name.c_str(),buff);
                         SetTextColour(4);
                         printf("%s Client '%s' added '%s' to ignore list\n",myTime(),cl->name.c_str(),ignClient.c_str());
 
                         //cout << myTime()<<" Now "<<cl->name<<" ignore "<<ignClient;
                     }
+                    rep1=false;
 }
 
 char* myTime()
@@ -875,7 +922,7 @@ void online(int& my_sock, bool& isConn,struct client* cl)
     for (; start != end; start++)
     {
         msgAns="#4";
-        msgAns +=start->first;
+        msgAns += start->first;
         if(start->first==cl->name)
         {
             msgAns+=" <-YOU";
